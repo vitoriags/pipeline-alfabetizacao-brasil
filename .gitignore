@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Dados locais
+*.csv
+*.csv.gz
+*.gz
+*.parquet
+*.json
+*.xlsx
+
+# AWS / credenciais
+.aws/
+*.pem
+*.ppk
+credentials
+config
+
+# Sistema
+.DS_Store
+Thumbs.db
