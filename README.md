@@ -15,3 +15,27 @@ Para executar a etapa Bronze:
 
 ```bash
 python src/ingest_bronze.py
+
+## Pipeline Silver
+
+A etapa Silver realiza a padronização das tabelas geradas na camada Bronze e cria um relatório simples de qualidade dos dados.
+
+Nesta camada foram aplicadas transformações como:
+
+- padronização de tipos de dados;
+- renomeação de colunas para deixar o significado mais claro;
+- preservação dos códigos de `rede` e `serie` quando o dicionário oficial não estava disponível;
+- validação de duplicidades nas chaves principais;
+- validação de percentuais no intervalo de 0 a 100.
+
+O relatório de qualidade é salvo em:
+
+```bash
+data/silver/quality_report_silver.csv
+```
+
+Para executar a etapa Silver:
+
+```bash
+python src/transform_silver.py
+```
