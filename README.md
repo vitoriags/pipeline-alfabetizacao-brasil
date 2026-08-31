@@ -18,6 +18,8 @@ Essa escolha permite analisar a situação da alfabetização no Brasil a partir
 - distância em relação às metas;
 - comparação com o cenário nacional.
 
+As tabelas em nível municipal e de alunos foram consideradas, mas não foram usadas nesta primeira versão para evitar aumento excessivo de volume, custo e complexidade.
+
 ## Estrutura do projeto
 
 ```bash
@@ -32,7 +34,8 @@ notebooks/
 
 src/
 ├── ingest_bronze.py
-└── transform_silver.py
+├── transform_silver.py
+└── transform_gold.py
 ```
 
 ## Pipeline Bronze
@@ -74,8 +77,54 @@ Para executar a etapa Silver:
 python src/transform_silver.py
 ```
 
+## Pipeline Gold
+
+A etapa Gold gera as tabelas finais de indicadores para análise da alfabetização.
+
+Nesta camada foram criadas duas saídas principais:
+
+- `indicadores_alfabetizacao_uf`: tabela com taxa de alfabetização, média de português, distância em relação ao ponto de corte de 743 pontos e status da UF em relação a esse ponto de corte;
+- `comparativo_metas_uf_brasil`: tabela com comparação entre taxa observada, meta de alfabetização da UF e referência nacional.
+
+A tabela de indicadores considera o ponto de corte de 743 pontos citado no desafio como referência para classificar a proficiência média.
+
+Alguns registros permanecem com valores nulos quando a fonte original não possui meta ou resultado disponível para aquele ano ou UF. Esses casos são mantidos para preservar a rastreabilidade da informação original.
+
+Para executar a etapa Gold:
+
+```bash
+python src/transform_gold.py
+```
+
+## Como executar a pipeline
+
+Com o ambiente virtual ativado, execute os scripts na seguinte ordem:
+
+```bash
+python src/ingest_bronze.py
+python src/transform_silver.py
+python src/transform_gold.py
+```
+
+## Qualidade dos dados
+
+Nesta primeira versão, as validações de qualidade foram aplicadas na camada Silver.
+
+As regras implementadas verificam:
+
+- duplicidade nas chaves principais de cada tabela;
+- percentuais fora do intervalo esperado de 0 a 100.
+
+O resultado das validações é salvo em:
+
+```bash
+data/silver/quality_report_silver.csv
+```
+
 ## Observações
 
 Os arquivos de dados brutos e os arquivos gerados nas camadas Bronze, Silver e Gold não são versionados no GitHub, seguindo boas práticas para projetos de dados.
 
 A coluna `rede` possui dicionário oficial indicado pela Base dos Dados, mas a tabela de tradução não pôde ser acessada via download manual. Por isso, nesta versão do projeto, os códigos da tabela `uf` foram preservados sem tradução.
+
+A ingestão principal foi tratada como batch, pois os dados oficiais de alfabetização são publicados de forma periódica. A parte de streaming será representada em uma etapa posterior por eventos operacionais da pipeline, como execução de cargas, validações de qualidade, alertas e atualização da camada Gold.
