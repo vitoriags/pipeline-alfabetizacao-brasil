@@ -2,7 +2,7 @@
 
 Projeto desenvolvido para o Tech Challenge — Fase 2 da pós-graduação em AI Scientist.
 
-O objetivo do projeto é construir uma pipeline de dados para análise da alfabetização no Brasil, utilizando dados oficiais em camadas Bronze, Silver e Gold.
+O objetivo do projeto é construir uma pipeline de dados para análise da alfabetização no Brasil, utilizando dados oficiais em uma arquitetura com camadas Bronze, Silver e Gold, além de simulação de streaming, monitoramento, implementação em cloud e boas práticas de FinOps.
 
 ## Escopo do projeto
 
@@ -20,6 +20,28 @@ Essa escolha permite analisar a situação da alfabetização no Brasil a partir
 
 As tabelas em nível municipal e de alunos foram consideradas, mas não foram usadas nesta primeira versão para evitar aumento excessivo de volume, custo e complexidade.
 
+## Arquitetura da solução
+
+A pipeline foi organizada em cinco etapas principais:
+
+```bash
+Dados brutos
+    ↓
+Bronze
+    ↓
+Silver
+    ↓
+Gold
+    ↓
+Streaming / Monitoramento
+    ↓
+AWS S3 / Athena
+```
+
+A ingestão principal foi tratada como batch, pois os dados oficiais de alfabetização são publicados de forma periódica.
+
+A parte de streaming foi representada por eventos operacionais da pipeline, como execução de cargas, validações de qualidade, alertas e atualização das tabelas Gold.
+
 ## Estrutura do projeto
 
 ```bash
@@ -27,7 +49,9 @@ data/
 ├── raw/
 ├── bronze/
 ├── silver/
-└── gold/
+├── gold/
+├── streaming/
+└── monitoring/
 
 notebooks/
 └── 01_exploracao_base_alfabetizacao.ipynb
@@ -35,8 +59,32 @@ notebooks/
 src/
 ├── ingest_bronze.py
 ├── transform_silver.py
-└── transform_gold.py
+├── transform_gold.py
+└── simulate_streaming_monitoring.py
+
+sql/
+└── create_athena_tables.sql
 ```
+
+## Dados utilizados
+
+Os dados foram obtidos a partir da Base dos Dados, no conjunto **Avaliação da Alfabetização**, disponível em:
+
+```text
+https://basedosdados.org/dataset/073a39d4-89cf-4068-b1e8-34ed0d9c0b72?table=e1de7a6a-5038-4e81-89f0-a15f2cc12c9b
+```
+
+As tabelas utilizadas no MVP foram baixadas manualmente em formato CSV compactado e armazenadas localmente na pasta `data/raw`.
+
+Os arquivos esperados na pasta `data/raw` são:
+
+```bash
+br_inep_avaliacao_alfabetizacao_uf.csv.gz
+br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_uf.csv.gz
+br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_brasil.csv.gz
+```
+
+Os arquivos de dados brutos não são versionados no GitHub.
 
 ## Pipeline Bronze
 
@@ -96,6 +144,35 @@ Para executar a etapa Gold:
 python src/transform_gold.py
 ```
 
+## Streaming e Monitoramento
+
+Como os dados oficiais de alfabetização são publicados de forma periódica, a parte de streaming foi representada por eventos operacionais da pipeline.
+
+O script `simulate_streaming_monitoring.py` gera eventos em formato JSONL para simular mensagens que poderiam ser enviadas para uma fila ou tópico em uma arquitetura real.
+
+Os eventos representam situações como:
+
+- ingestão Bronze concluída;
+- transformação Silver concluída;
+- validação de qualidade concluída;
+- atualização das tabelas Gold;
+- execução geral da pipeline finalizada.
+
+Além dos eventos JSONL, também é gerado um log tabular de monitoramento com informações como etapa, status, tabela processada e quantidade de registros.
+
+Arquivos gerados:
+
+```bash
+data/streaming/pipeline_events.jsonl
+data/monitoring/pipeline_monitoring_log.csv
+```
+
+Para executar a simulação de streaming e monitoramento:
+
+```bash
+python src/simulate_streaming_monitoring.py
+```
+
 ## Como executar a pipeline
 
 Com o ambiente virtual ativado, execute os scripts na seguinte ordem:
@@ -104,6 +181,7 @@ Com o ambiente virtual ativado, execute os scripts na seguinte ordem:
 python src/ingest_bronze.py
 python src/transform_silver.py
 python src/transform_gold.py
+python src/simulate_streaming_monitoring.py
 ```
 
 ## Qualidade dos dados
@@ -121,35 +199,7 @@ O resultado das validações é salvo em:
 data/silver/quality_report_silver.csv
 ```
 
-## Observações
-
-Os arquivos de dados brutos e os arquivos gerados nas camadas Bronze, Silver e Gold não são versionados no GitHub, seguindo boas práticas para projetos de dados.
-
-A coluna `rede` possui dicionário oficial indicado pela Base dos Dados, mas a tabela de tradução não pôde ser acessada via download manual. Por isso, nesta versão do projeto, os códigos da tabela `uf` foram preservados sem tradução.
-
-A ingestão principal foi tratada como batch, pois os dados oficiais de alfabetização são publicados de forma periódica. A parte de streaming será representada em uma etapa posterior por eventos operacionais da pipeline, como execução de cargas, validações de qualidade, alertas e atualização da camada Gold.
-
-## Streaming e Monitoramento
-
-Como os dados oficiais de alfabetização são publicados de forma periódica, a parte de streaming foi representada por eventos operacionais da pipeline.
-
-O script `simulate_streaming_monitoring.py` gera eventos em formato JSONL para simular mensagens que poderiam ser enviadas para uma fila ou tópico em uma arquitetura real.
-
-Os eventos representam situações como:
-
-- ingestão Bronze concluída;
-- transformação Silver concluída;
-- validação de qualidade concluída;
-- atualização das tabelas Gold;
-- execução geral da pipeline finalizada.
-
-Além dos eventos JSONL, também é gerado um log tabular de monitoramento com informações como etapa, status, tabela processada e quantidade de registros.
-
-Para executar a simulação de streaming e monitoramento:
-
-```bash
-python src/simulate_streaming_monitoring.py
-```
+Na execução testada, as regras de qualidade retornaram status `ok`.
 
 ## Implementação em Cloud
 
@@ -174,6 +224,11 @@ Os comandos SQL usados para criar o banco e as tabelas no Athena estão em:
 sql/create_athena_tables.sql
 ```
 
+As tabelas criadas no Athena foram:
+
+- `alfabetizacao_brasil.indicadores_alfabetizacao_uf`;
+- `alfabetizacao_brasil.comparativo_metas_uf_brasil`.
+
 ## FinOps
 
 Algumas decisões foram tomadas para reduzir custo e complexidade na nuvem:
@@ -183,6 +238,31 @@ Algumas decisões foram tomadas para reduzir custo e complexidade na nuvem:
 - uso do S3 como armazenamento principal, por ser simples e adequado para dados em arquivos;
 - uso do Athena somente para consulta das tabelas finais;
 - manutenção de baixo volume de dados no MVP;
-- ausência de recursos persistentes mais caros, como EC2, EMR, Glue Jobs ou clusters sempre ligados.
+- ausência de recursos persistentes mais caros, como EC2, EMR, Glue Jobs ou clusters sempre ligados;
+- desativação de versionamento no bucket para evitar custo adicional no MVP;
+- bloqueio de acesso público ao bucket.
 
 Essa escolha ajuda a manter o projeto mais simples, reprodutível e compatível com o ambiente AWS Academy.
+
+## Boas práticas de Git
+
+O projeto foi desenvolvido utilizando branches separadas por etapa, com commits e Pull Requests para organizar a evolução da solução.
+
+Principais etapas versionadas:
+
+- configuração inicial do projeto;
+- pipeline Bronze;
+- pipeline Silver e qualidade;
+- pipeline Gold;
+- streaming e monitoramento;
+- documentação de AWS, Athena e FinOps.
+
+## Observações e limitações
+
+Os arquivos de dados brutos e os arquivos gerados nas camadas Bronze, Silver, Gold, Streaming e Monitoring não são versionados no GitHub, seguindo boas práticas para projetos de dados.
+
+A coluna `rede` possui dicionário oficial indicado pela Base dos Dados, mas a tabela de tradução não pôde ser acessada via download manual. Por isso, nesta versão do projeto, os códigos da tabela `uf` foram preservados sem tradução.
+
+A parte de streaming foi implementada como uma simulação de eventos operacionais da pipeline, pois os dados oficiais de alfabetização são publicados de forma periódica e não representam um fluxo contínuo em tempo real.
+
+As tabelas municipais e de alunos podem ser incorporadas em uma evolução futura do projeto, caso seja necessário um nível maior de granularidade.
