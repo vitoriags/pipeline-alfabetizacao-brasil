@@ -128,3 +128,25 @@ Os arquivos de dados brutos e os arquivos gerados nas camadas Bronze, Silver e G
 A coluna `rede` possui dicionário oficial indicado pela Base dos Dados, mas a tabela de tradução não pôde ser acessada via download manual. Por isso, nesta versão do projeto, os códigos da tabela `uf` foram preservados sem tradução.
 
 A ingestão principal foi tratada como batch, pois os dados oficiais de alfabetização são publicados de forma periódica. A parte de streaming será representada em uma etapa posterior por eventos operacionais da pipeline, como execução de cargas, validações de qualidade, alertas e atualização da camada Gold.
+
+## Streaming e Monitoramento
+
+Como os dados oficiais de alfabetização são publicados de forma periódica, a parte de streaming foi representada por eventos operacionais da pipeline.
+
+O script `simulate_streaming_monitoring.py` gera eventos em formato JSONL para simular mensagens que poderiam ser enviadas para uma fila ou tópico em uma arquitetura real.
+
+Os eventos representam situações como:
+
+- ingestão Bronze concluída;
+- transformação Silver concluída;
+- validação de qualidade concluída;
+- atualização das tabelas Gold;
+- execução geral da pipeline finalizada.
+
+Além dos eventos JSONL, também é gerado um log tabular de monitoramento com informações como etapa, status, tabela processada e quantidade de registros.
+
+Para executar a simulação de streaming e monitoramento:
+
+```bash
+python src/simulate_streaming_monitoring.py
+```

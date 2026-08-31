@@ -26,3 +26,8 @@ config
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Eventos e logs gerados pela pipeline
+*.jsonl
+data/streaming/
+data/monitoring/
