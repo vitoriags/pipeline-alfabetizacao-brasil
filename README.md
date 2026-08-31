@@ -150,3 +150,39 @@ Para executar a simulação de streaming e monitoramento:
 ```bash
 python src/simulate_streaming_monitoring.py
 ```
+
+## Implementação em Cloud
+
+A implementação em cloud foi feita na AWS, utilizando o Amazon S3 para armazenar as camadas da pipeline e o Amazon Athena para consultar as tabelas finais da camada Gold.
+
+As camadas foram organizadas no S3 da seguinte forma:
+
+```bash
+s3://pipeline-alfabetizacao-brasil-vitoria-20260830/raw/
+s3://pipeline-alfabetizacao-brasil-vitoria-20260830/bronze/
+s3://pipeline-alfabetizacao-brasil-vitoria-20260830/silver/
+s3://pipeline-alfabetizacao-brasil-vitoria-20260830/gold/
+s3://pipeline-alfabetizacao-brasil-vitoria-20260830/streaming/
+s3://pipeline-alfabetizacao-brasil-vitoria-20260830/monitoring/
+```
+
+As tabelas Gold foram disponibilizadas no Athena como tabelas externas apontando para os arquivos Parquet armazenados no S3.
+
+Os comandos SQL usados para criar o banco e as tabelas no Athena estão em:
+
+```bash
+sql/create_athena_tables.sql
+```
+
+## FinOps
+
+Algumas decisões foram tomadas para reduzir custo e complexidade na nuvem:
+
+- uso de arquivos Parquet, que reduzem volume lido em consultas analíticas;
+- separação dos dados em camadas, evitando reprocessamento desnecessário;
+- uso do S3 como armazenamento principal, por ser simples e adequado para dados em arquivos;
+- uso do Athena somente para consulta das tabelas finais;
+- manutenção de baixo volume de dados no MVP;
+- ausência de recursos persistentes mais caros, como EC2, EMR, Glue Jobs ou clusters sempre ligados.
+
+Essa escolha ajuda a manter o projeto mais simples, reprodutível e compatível com o ambiente AWS Academy.
