@@ -6,7 +6,7 @@ Projeto desenvolvido para o Tech Challenge — Fase 2 da pós-graduação em AI 
 
 A alfabetização na idade certa é um dos principais desafios da educação básica no Brasil. Quando uma criança não desenvolve habilidades adequadas de leitura e escrita nos primeiros anos escolares, isso pode impactar seu desempenho nas próximas etapas da trajetória escolar.
 
-Neste projeto, a proposta é construir uma pipeline de dados para organizar, tratar e disponibilizar informações relacionadas ao indicador de alfabetização. A ideia é transformar dados brutos em bases analíticas que possam apoiar análises sobre desempenho educacional, metas de alfabetização e desigualdades entre unidades da federação.
+Neste projeto, a proposta é construir uma pipeline de dados para organizar, tratar e disponibilizar informações relacionadas ao indicador de alfabetização. A ideia é transformar dados brutos em bases analíticas que possam apoiar análises sobre desempenho educacional, metas de alfabetização e desigualdades entre unidades da federação e municípios.
 
 ## Desafio educacional
 
@@ -14,9 +14,9 @@ O desafio utiliza dados oficiais relacionados à avaliação da alfabetização 
 
 A partir desses dados, é possível responder perguntas como:
 
-- quais UFs estão mais distantes das metas de alfabetização;
+- quais UFs e municípios estão mais distantes das metas de alfabetização;
 - quais redes apresentam melhores ou piores resultados;
-- quais estados estão acima ou abaixo da referência nacional;
+- quais estados e municípios estão acima ou abaixo da referência nacional;
 - como os dados tratados poderiam apoiar decisões de políticas públicas.
 
 ## Objetivo do projeto
@@ -25,19 +25,15 @@ O objetivo do projeto é construir uma pipeline de dados em arquitetura Medalhã
 
 ## Escopo do projeto
 
-As tabelas escolhidas para o MVP são:
+As tabelas utilizadas na pipeline são:
 
 - `uf`: resultados observados da alfabetização por unidade da federação e rede de ensino;
+- `meta_alfabetizacao_brasil`: metas e resultado consolidado em nível nacional;
 - `meta_alfabetizacao_uf`: metas de alfabetização por UF até 2030;
-- `meta_alfabetizacao_brasil`: metas e resultado consolidado em nível nacional.
+- `municipio`: resultados observados da alfabetização por município e rede de ensino;
+- `meta_alfabetizacao_municipio`: metas de alfabetização por município até 2030.
 
-Essa escolha permite analisar a situação da alfabetização no Brasil a partir de três pontos:
-
-- resultado observado;
-- distância em relação às metas;
-- comparação com o cenário nacional.
-
-As tabelas em nível municipal e de alunos foram consideradas, mas não foram usadas nesta primeira versão para evitar aumento excessivo de volume, custo e complexidade.
+A tabela `alunos` também é citada no desafio, mas não foi utilizada nesta versão porque o download manual não estava disponível na plataforma sem assinatura. Por isso, ela foi documentada como limitação e possível evolução futura.
 
 ## Arquitetura proposta
 
@@ -121,15 +117,19 @@ Os dados foram obtidos a partir da Base dos Dados, no conjunto **Avaliação da 
 https://basedosdados.org/dataset/073a39d4-89cf-4068-b1e8-34ed0d9c0b72?table=e1de7a6a-5038-4e81-89f0-a15f2cc12c9b
 ```
 
-As tabelas utilizadas no MVP foram baixadas manualmente em formato CSV compactado e armazenadas localmente na pasta `data/raw`.
+As tabelas utilizadas no projeto foram baixadas manualmente em formato CSV compactado e armazenadas localmente na pasta `data/raw`.
 
 Os arquivos esperados na pasta `data/raw` são:
 
 ```bash
 br_inep_avaliacao_alfabetizacao_uf.csv.gz
-br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_uf.csv.gz
 br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_brasil.csv.gz
+br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_uf.csv.gz
+br_inep_avaliacao_alfabetizacao_municipio.csv.gz
+br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_municipio.csv.gz
 ```
+
+A tabela `alunos` foi analisada como fonte prevista no desafio, mas não foi incorporada nesta versão por restrição de acesso ao download manual.
 
 ## Documentação técnica
 
@@ -146,7 +146,7 @@ docs/documentacao_tecnica.md
 | Tecnologia | Uso no projeto | Justificativa |
 |---|---|---|
 | Python | Desenvolvimento dos scripts da pipeline | Linguagem simples, flexível e adequada para processamento de dados |
-| Pandas | Leitura, transformação e validação dos dados | Facilita a manipulação das tabelas no escopo do MVP |
+| Pandas | Leitura, transformação e validação dos dados | Facilita a manipulação das tabelas no escopo do projeto |
 | Parquet | Armazenamento nas camadas Bronze, Silver e Gold | Formato mais eficiente para consulta e armazenamento do que CSV |
 | JSONL | Simulação de eventos streaming | Formato simples para representar eventos operacionais da pipeline |
 | Git e GitHub | Versionamento do projeto | Permite acompanhar a evolução da solução com commits, branches e PRs |
@@ -161,6 +161,14 @@ Nesta camada, os dados são mantidos próximos da fonte original. As únicas alt
 
 - `data_ingestao`: data e hora em que o arquivo foi processado;
 - `arquivo_origem`: nome do arquivo original utilizado na ingestão.
+
+Tabelas processadas na Bronze:
+
+- `uf`;
+- `meta_alfabetizacao_brasil`;
+- `meta_alfabetizacao_uf`;
+- `municipio`;
+- `meta_alfabetizacao_municipio`.
 
 Para executar a etapa Bronze:
 
@@ -196,14 +204,16 @@ python src/transform_silver.py
 
 A etapa Gold gera as tabelas finais de indicadores para análise da alfabetização.
 
-Nesta camada foram criadas duas saídas principais:
+Nesta camada foram criadas quatro saídas principais:
 
 - `indicadores_alfabetizacao_uf`: tabela com taxa de alfabetização, média de português, distância em relação ao ponto de corte de 743 pontos e status da UF em relação a esse ponto de corte;
-- `comparativo_metas_uf_brasil`: tabela com comparação entre taxa observada, meta de alfabetização da UF e referência nacional.
+- `indicadores_alfabetizacao_municipio`: tabela com os mesmos indicadores de alfabetização, mas em nível municipal;
+- `comparativo_metas_uf_brasil`: tabela com comparação entre taxa observada, meta de alfabetização da UF e referência nacional;
+- `comparativo_metas_municipio_brasil`: tabela com comparação entre taxa observada, meta de alfabetização do município e referência nacional.
 
 A tabela de indicadores considera o ponto de corte de 743 pontos citado no desafio como referência para classificar a proficiência média.
 
-Alguns registros permanecem com valores nulos quando a fonte original não possui meta ou resultado disponível para aquele ano ou UF. Esses casos são mantidos para preservar a rastreabilidade da informação original.
+Alguns registros permanecem com valores nulos quando a fonte original não possui meta ou resultado disponível para aquele ano, UF ou município. Esses casos são mantidos para preservar a rastreabilidade da informação original.
 
 Para executar a etapa Gold:
 
@@ -242,7 +252,7 @@ python src/simulate_streaming_monitoring.py
 
 ## Qualidade dos dados
 
-Nesta primeira versão, as validações de qualidade foram aplicadas na camada Silver.
+Nesta versão, as validações de qualidade foram aplicadas na camada Silver.
 
 As regras implementadas verificam:
 
@@ -307,7 +317,9 @@ sql/create_athena_tables.sql
 As tabelas criadas no Athena foram:
 
 - `alfabetizacao_brasil.indicadores_alfabetizacao_uf`;
-- `alfabetizacao_brasil.comparativo_metas_uf_brasil`.
+- `alfabetizacao_brasil.indicadores_alfabetizacao_municipio`;
+- `alfabetizacao_brasil.comparativo_metas_uf_brasil`;
+- `alfabetizacao_brasil.comparativo_metas_municipio_brasil`.
 
 ## Decisões arquiteturais
 
@@ -362,15 +374,15 @@ Alguns usos possíveis são:
 
 ### Modelos de predição de alfabetização
 
-A tabela Gold poderia ser usada para treinar modelos que estimem a taxa de alfabetização ou a chance de uma UF atingir determinada meta. Variáveis como ano, UF, rede, taxa observada, média de português, distância para o ponto de corte e distância para a meta poderiam ser usadas como features.
+A tabela Gold poderia ser usada para treinar modelos que estimem a taxa de alfabetização ou a chance de uma UF ou município atingir determinada meta. Variáveis como ano, UF, município, rede, taxa observada, média de português, distância para o ponto de corte e distância para a meta poderiam ser usadas como features.
 
 ### Análise de desigualdade educacional
 
-Os dados tratados permitem comparar resultados entre UFs e redes de ensino. Isso pode apoiar análises sobre desigualdade territorial, identificando regiões com maior distância em relação às metas ou ao resultado nacional.
+Os dados tratados permitem comparar resultados entre UFs, municípios e redes de ensino. Isso pode apoiar análises sobre desigualdade territorial, identificando regiões com maior distância em relação às metas ou ao resultado nacional.
 
 ### Políticas públicas baseadas em dados
 
-A base Gold pode apoiar a priorização de políticas públicas, indicando quais UFs estão mais distantes das metas de alfabetização e onde ações educacionais poderiam ser acompanhadas com mais atenção.
+A base Gold pode apoiar a priorização de políticas públicas, indicando quais UFs e municípios estão mais distantes das metas de alfabetização e onde ações educacionais poderiam ser acompanhadas com mais atenção.
 
 ## Boas práticas de Git
 
@@ -384,14 +396,15 @@ Principais etapas versionadas:
 - pipeline Gold;
 - streaming e monitoramento;
 - documentação de AWS, Athena e FinOps;
+- documentação técnica;
 - documentação final.
 
 ## Observações e limitações
 
 Os arquivos de dados brutos e os arquivos gerados nas camadas Bronze, Silver, Gold, Streaming e Monitoring não são versionados no GitHub, seguindo boas práticas para projetos de dados.
 
-A coluna `rede` possui dicionário oficial indicado pela Base dos Dados, mas a tabela de tradução não pôde ser acessada via download manual. Por isso, nesta versão do projeto, os códigos da tabela `uf` foram preservados sem tradução.
+A coluna `rede` possui dicionário oficial indicado pela Base dos Dados, mas a tabela de tradução não pôde ser acessada via download manual. Por isso, nesta versão do projeto, os códigos da tabela `uf` e da tabela `municipio` foram preservados sem tradução.
+
+A tabela `alunos` foi citada no desafio, mas não foi usada nesta versão porque o download manual não estava disponível sem assinatura na plataforma. Como evolução futura, essa tabela poderia ser integrada por meio de consulta no BigQuery, preferencialmente de forma agregada para reduzir volume e custo.
 
 A parte de streaming foi implementada como uma simulação de eventos operacionais da pipeline, pois os dados oficiais de alfabetização são publicados de forma periódica e não representam um fluxo contínuo em tempo real.
-
-As tabelas municipais e de alunos podem ser incorporadas em uma evolução futura do projeto, caso seja necessário um nível maior de granularidade.

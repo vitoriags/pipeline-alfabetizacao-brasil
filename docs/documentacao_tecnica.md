@@ -4,24 +4,30 @@
 
 Este documento complementa o README do projeto e descreve, de forma mais técnica, a implementação da pipeline de dados para análise da alfabetização no Brasil.
 
-A solução foi construída com foco em um MVP funcional, utilizando dados oficiais da Base dos Dados relacionados à Avaliação da Alfabetização. A pipeline segue a arquitetura Medalhão, com camadas Bronze, Silver e Gold, além de uma simulação de streaming e monitoramento da execução.
+A solução foi construída com foco em um MVP funcional, utilizando dados oficiais da Base dos Dados relacionados à Avaliação da Alfabetização. A pipeline segue a arquitetura Medalhão, com camadas Bronze, Silver e Gold, além de uma simulação de streaming, monitoramento da execução e disponibilização das tabelas finais em ambiente cloud.
 
 ## Fontes de dados
 
-As tabelas utilizadas foram:
+As tabelas utilizadas na pipeline foram:
 
 - `uf`
-- `meta_alfabetizacao_uf`
 - `meta_alfabetizacao_brasil`
+- `meta_alfabetizacao_uf`
+- `municipio`
+- `meta_alfabetizacao_municipio`
 
-Os arquivos foram baixados manualmente em formato CSV compactado e armazenados localmente na pasta `data/raw`.
+A tabela `alunos` também é citada no desafio, mas não foi incorporada nesta versão porque o download manual não estava disponível sem assinatura na plataforma.
+
+Os arquivos utilizados foram baixados manualmente em formato CSV compactado e armazenados localmente na pasta `data/raw`.
 
 Arquivos esperados:
 
 ```bash
 data/raw/br_inep_avaliacao_alfabetizacao_uf.csv.gz
-data/raw/br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_uf.csv.gz
 data/raw/br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_brasil.csv.gz
+data/raw/br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_uf.csv.gz
+data/raw/br_inep_avaliacao_alfabetizacao_municipio.csv.gz
+data/raw/br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_municipio.csv.gz
 ```
 
 Esses arquivos não são versionados no GitHub.
@@ -59,12 +65,22 @@ Nesta etapa, os dados são mantidos próximos da fonte original. As únicas colu
 - `data_ingestao`
 - `arquivo_origem`
 
+Tabelas processadas:
+
+- `uf`
+- `meta_alfabetizacao_brasil`
+- `meta_alfabetizacao_uf`
+- `municipio`
+- `meta_alfabetizacao_municipio`
+
 Saídas geradas:
 
 ```bash
 data/bronze/uf.parquet
-data/bronze/meta_alfabetizacao_uf.parquet
 data/bronze/meta_alfabetizacao_brasil.parquet
+data/bronze/meta_alfabetizacao_uf.parquet
+data/bronze/municipio.parquet
+data/bronze/meta_alfabetizacao_municipio.parquet
 ```
 
 ## Camada Silver
@@ -81,8 +97,9 @@ Principais tratamentos aplicados:
 
 - padronização de tipos de dados;
 - padronização de `sigla_uf`;
+- padronização de `id_municipio`;
 - renomeação de `serie` para `serie_codigo`;
-- renomeação de `rede` para `rede_codigo` na tabela `uf`;
+- renomeação de `rede` para `rede_codigo` nas tabelas `uf` e `municipio`;
 - renomeação de `rede` para `rede_descricao` nas tabelas de metas;
 - preservação dos códigos de `rede` quando o dicionário oficial não estava disponível.
 
@@ -90,8 +107,10 @@ Saídas geradas:
 
 ```bash
 data/silver/uf.parquet
-data/silver/meta_alfabetizacao_uf.parquet
 data/silver/meta_alfabetizacao_brasil.parquet
+data/silver/meta_alfabetizacao_uf.parquet
+data/silver/municipio.parquet
+data/silver/meta_alfabetizacao_municipio.parquet
 data/silver/quality_report_silver.csv
 ```
 
@@ -111,8 +130,10 @@ Chaves consideradas:
 | Tabela | Chave |
 |---|---|
 | `uf` | `ano`, `sigla_uf`, `serie_codigo`, `rede_codigo` |
-| `meta_alfabetizacao_uf` | `ano`, `sigla_uf`, `rede_descricao` |
 | `meta_alfabetizacao_brasil` | `ano`, `rede_descricao` |
+| `meta_alfabetizacao_uf` | `ano`, `sigla_uf`, `rede_descricao` |
+| `municipio` | `ano`, `id_municipio`, `serie_codigo`, `rede_codigo` |
+| `meta_alfabetizacao_municipio` | `ano`, `id_municipio`, `rede_descricao` |
 
 O resultado das validações é salvo em:
 
@@ -130,13 +151,15 @@ Arquivo responsável:
 src/transform_gold.py
 ```
 
-A camada Gold gera tabelas analíticas finais, voltadas para análise e consumo em ferramentas SQL ou BI.
+A camada Gold gera tabelas analíticas finais, voltadas para análise e consumo em consultas SQL ou ferramentas de BI.
 
 Saídas geradas:
 
 ```bash
 data/gold/indicadores_alfabetizacao_uf.parquet
+data/gold/indicadores_alfabetizacao_municipio.parquet
 data/gold/comparativo_metas_uf_brasil.parquet
+data/gold/comparativo_metas_municipio_brasil.parquet
 ```
 
 ### Tabela `indicadores_alfabetizacao_uf`
@@ -158,6 +181,21 @@ O campo `status_ponto_corte` classifica os registros como:
 
 - `abaixo_do_ponto_corte`
 - `acima_ou_igual_ao_ponto_corte`
+
+### Tabela `indicadores_alfabetizacao_municipio`
+
+Essa tabela utiliza a base `municipio` da camada Silver e aplica a mesma lógica de indicadores da tabela por UF, mas em granularidade municipal.
+
+Principais campos:
+
+- `ano`
+- `id_municipio`
+- `serie_codigo`
+- `rede_codigo`
+- `taxa_alfabetizacao`
+- `media_portugues`
+- `distancia_ponto_corte`
+- `status_ponto_corte`
 
 ### Tabela `comparativo_metas_uf_brasil`
 
@@ -182,6 +220,33 @@ Principais campos:
 - `taxa_alfabetizacao_brasil`
 - `meta_referencia_brasil`
 - `diferenca_taxa_uf_brasil`
+- `percentual_participacao`
+- `percentual_participacao_brasil`
+
+### Tabela `comparativo_metas_municipio_brasil`
+
+Essa tabela utiliza as bases `meta_alfabetizacao_municipio` e `meta_alfabetizacao_brasil` da camada Silver.
+
+Ela calcula:
+
+- meta de referência do ano;
+- distância da taxa observada para a meta do município;
+- status do município em relação à meta;
+- diferença entre taxa do município e taxa nacional.
+
+Principais campos:
+
+- `ano`
+- `id_municipio`
+- `rede_descricao`
+- `taxa_alfabetizacao`
+- `meta_referencia_ano`
+- `distancia_para_meta_municipio`
+- `status_meta_municipio`
+- `taxa_alfabetizacao_brasil`
+- `meta_referencia_brasil`
+- `diferenca_taxa_municipio_brasil`
+- `nivel_alfabetizacao`
 - `percentual_participacao`
 - `percentual_participacao_brasil`
 
@@ -231,6 +296,8 @@ O log contém informações como:
 - `total_rules`
 - `rules_with_error`
 
+Com a inclusão das tabelas municipais, a execução testada gerou 16 eventos.
+
 ## Implementação em cloud
 
 A implementação em cloud foi feita na AWS.
@@ -264,7 +331,9 @@ As tabelas Gold foram organizadas em pastas específicas para facilitar a criaç
 
 ```bash
 s3://pipeline-alfabetizacao-brasil-vitoria-20260830/gold/indicadores_alfabetizacao_uf/
+s3://pipeline-alfabetizacao-brasil-vitoria-20260830/gold/indicadores_alfabetizacao_municipio/
 s3://pipeline-alfabetizacao-brasil-vitoria-20260830/gold/comparativo_metas_uf_brasil/
+s3://pipeline-alfabetizacao-brasil-vitoria-20260830/gold/comparativo_metas_municipio_brasil/
 ```
 
 ## Athena
@@ -281,11 +350,13 @@ No Athena, foi criado o banco:
 alfabetizacao_brasil
 ```
 
-E duas tabelas externas:
+E quatro tabelas externas:
 
 ```sql
 alfabetizacao_brasil.indicadores_alfabetizacao_uf
+alfabetizacao_brasil.indicadores_alfabetizacao_municipio
 alfabetizacao_brasil.comparativo_metas_uf_brasil
+alfabetizacao_brasil.comparativo_metas_municipio_brasil
 ```
 
 As tabelas externas apontam para os arquivos Parquet da camada Gold armazenados no S3.
@@ -312,9 +383,9 @@ A escolha por S3 + Athena reduz a necessidade de manter infraestrutura ativa con
 Algumas limitações foram assumidas nesta versão:
 
 - a tabela de tradução oficial da coluna `rede` não pôde ser acessada via download manual;
-- por isso, os códigos de `rede` da tabela `uf` foram preservados sem tradução;
+- por isso, os códigos de `rede` das tabelas `uf` e `municipio` foram preservados sem tradução;
+- a tabela `alunos` foi citada no desafio, mas não foi usada porque o download manual não estava disponível sem assinatura na plataforma;
 - a parte streaming foi implementada como simulação de eventos operacionais, e não com ferramenta real como Kafka ou Kinesis;
-- as tabelas municipais e de alunos não foram usadas no MVP para evitar aumento de volume, custo e complexidade;
 - não foi implementado modelo de machine learning nesta fase, apenas a preparação da camada Gold para possíveis aplicações futuras.
 
 ## Como executar localmente
@@ -354,4 +425,5 @@ Etapas versionadas:
 - pipeline Gold;
 - streaming e monitoramento;
 - documentação AWS, Athena e FinOps;
-- documentação final.
+- documentação técnica;
+- integração das tabelas municipais.
