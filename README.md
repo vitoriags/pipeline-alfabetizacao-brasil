@@ -106,6 +106,9 @@ src/
 
 sql/
 └── create_athena_tables.sql
+
+docs/
+└── documentacao_tecnica.md
 ```
 
 Os arquivos de dados e os arquivos gerados pela pipeline não são versionados no GitHub.
@@ -126,6 +129,16 @@ Os arquivos esperados na pasta `data/raw` são:
 br_inep_avaliacao_alfabetizacao_uf.csv.gz
 br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_uf.csv.gz
 br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_brasil.csv.gz
+```
+
+## Documentação técnica
+
+Além deste README, o projeto possui uma documentação técnica complementar com detalhes sobre as camadas da pipeline, regras de qualidade, tabelas Gold, simulação de streaming, monitoramento, AWS, Athena e limitações técnicas.
+
+O arquivo está disponível em:
+
+```bash
+docs/documentacao_tecnica.md
 ```
 
 ## Tecnologias utilizadas
@@ -328,7 +341,7 @@ O log registra informações como:
 - quantidade de registros;
 - resultado das validações de qualidade.
 
-Para controle de custos, foram adotadas as seguintes práticas:
+O controle de custos foi feito principalmente por escolhas arquiteturais. Para isso, foram adotadas as seguintes práticas:
 
 - uso de arquivos Parquet;
 - separação dos dados em camadas;
@@ -371,7 +384,7 @@ Principais etapas versionadas:
 - pipeline Gold;
 - streaming e monitoramento;
 - documentação de AWS, Athena e FinOps;
-- revisão final do README.
+- documentação final.
 
 ## Observações e limitações
 
