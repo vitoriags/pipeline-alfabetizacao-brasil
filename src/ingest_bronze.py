@@ -13,8 +13,9 @@ SOURCES = {
     "uf": "br_inep_avaliacao_alfabetizacao_uf.csv.gz",
     "meta_alfabetizacao_uf": "br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_uf.csv.gz",
     "meta_alfabetizacao_brasil": "br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_brasil.csv.gz",
+    "municipio": "br_inep_avaliacao_alfabetizacao_municipio.csv.gz",
+    "meta_alfabetizacao_municipio": "br_inep_avaliacao_alfabetizacao_meta_alfabetizacao_municipio.csv.gz",
 }
-
 
 def ingest_to_bronze(table_name: str, file_name: str) -> None:
     input_path = RAW_DIR / file_name

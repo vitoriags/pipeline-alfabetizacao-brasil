@@ -44,22 +44,27 @@ def write_jsonl(events: list[dict], output_path: Path) -> None:
 
 def build_pipeline_events() -> list[dict]:
     events = []
-
     bronze_tables = [
         "uf",
         "meta_alfabetizacao_uf",
         "meta_alfabetizacao_brasil",
+        "municipio",
+        "meta_alfabetizacao_municipio",
     ]
 
     silver_tables = [
         "uf",
         "meta_alfabetizacao_uf",
         "meta_alfabetizacao_brasil",
+        "municipio",
+        "meta_alfabetizacao_municipio",
     ]
 
     gold_tables = [
         "indicadores_alfabetizacao_uf",
+        "indicadores_alfabetizacao_municipio",
         "comparativo_metas_uf_brasil",
+        "comparativo_metas_municipio_brasil",
     ]
 
     # Como os dados oficiais são publicados de forma periódica,
