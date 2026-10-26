@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 SILVER_DIR = Path("data/silver")
 GOLD_DIR = Path("data/gold")
 
@@ -196,7 +195,6 @@ def build_comparativo_metas_municipio_brasil(
     brasil_reference = meta_brasil[
         [
             "ano",
-            "rede_descricao",
             "taxa_alfabetizacao",
             "meta_referencia_ano",
             "percentual_participacao",
@@ -211,8 +209,9 @@ def build_comparativo_metas_municipio_brasil(
 
     df = meta_municipio.merge(
         brasil_reference,
-        on=["ano", "rede_descricao"],
+        on="ano",
         how="left",
+        validate="many_to_one",
     )
 
     df["diferenca_taxa_municipio_brasil"] = (
