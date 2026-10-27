@@ -69,3 +69,20 @@ CREATE EXTERNAL TABLE IF NOT EXISTS alfabetizacao_brasil.comparativo_metas_munic
 )
 STORED AS PARQUET
 LOCATION 's3://pipeline-alfabetizacao-brasil-vitoria-20260830/gold/comparativo_metas_municipio_brasil/';
+
+
+-- Tabela Gold com os alunos que possuem avaliações válidas.
+CREATE EXTERNAL TABLE IF NOT EXISTS alfabetizacao_brasil.alunos_avaliacoes_validas (
+    ano BIGINT,
+    id_municipio STRING,
+    id_escola STRING,
+    id_aluno STRING,
+    caderno_codigo STRING,
+    serie_codigo STRING,
+    rede_codigo STRING,
+    alfabetizado BIGINT,
+    proficiencia DOUBLE,
+    peso_aluno DOUBLE
+)
+STORED AS PARQUET
+LOCATION 's3://pipeline-alfabetizacao-brasil-vitoria-20260830/gold/alunos_avaliacoes_validas/';

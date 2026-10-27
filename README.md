@@ -106,7 +106,7 @@ O fluxo da pipeline funciona da seguinte forma:
 7. A etapa de streaming simula eventos operacionais da pipeline em formato JSONL.
 8. O monitoramento gera um log tabular com status, etapa, tabela e registros processados.
 9. As camadas são armazenadas no Amazon S3.
-10. As tabelas analíticas podem ser disponibilizadas no Amazon Athena para consulta SQL.
+10. As tabelas analíticas são disponibilizadas no Amazon Athena para consulta SQL.
 11. Os dados individuais preparados serão utilizados nas próximas etapas de análise exploratória e Machine Learning.
 
 ## Estrutura utilizada pela pipeline
@@ -546,12 +546,12 @@ Com a evolução da Fase 3 também foram armazenados:
 bronze/alunos.parquet
 silver/alunos.parquet
 silver/quality_report_silver.csv
-gold/alunos_avaliacoes_validas.parquet
+gold/alunos_avaliacoes_validas/alunos_avaliacoes_validas.parquet
 ```
 
 ## Amazon Athena
 
-As tabelas Gold da Fase 2 foram disponibilizadas no Athena como tabelas externas apontando para arquivos Parquet armazenados no S3.
+As tabelas Gold foram disponibilizadas no Athena como tabelas externas apontando para arquivos Parquet armazenados no S3.
 
 Os comandos SQL estão em:
 
@@ -564,9 +564,16 @@ As tabelas atualmente configuradas no Athena são:
 - `alfabetizacao_brasil.indicadores_alfabetizacao_uf`;
 - `alfabetizacao_brasil.indicadores_alfabetizacao_municipio`;
 - `alfabetizacao_brasil.comparativo_metas_uf_brasil`;
-- `alfabetizacao_brasil.comparativo_metas_municipio_brasil`.
+- `alfabetizacao_brasil.comparativo_metas_municipio_brasil`;
+- `alfabetizacao_brasil.alunos_avaliacoes_validas`.
 
-A nova base individual da Fase 3 já está armazenada no S3, mas sua disponibilização no Athena será realizada posteriormente, juntamente com a definição da base analítica final utilizada no Machine Learning.
+A tabela `alfabetizacao_brasil.alunos_avaliacoes_validas` foi criada a partir da nova Gold da Fase 3 e validada no Athena com:
+
+```text
+3.354.661 registros
+```
+
+A contagem obtida no Athena corresponde ao total gerado localmente pela pipeline, confirmando que o arquivo armazenado no S3 está sendo lido corretamente.
 
 ## Decisões arquiteturais
 
@@ -769,6 +776,8 @@ Até o momento, foram concluídas:
 - definição da população com avaliação válida;
 - criação da Gold `alunos_avaliacoes_validas` com 3.354.661 registros;
 - armazenamento das novas tabelas no Amazon S3;
+- criação da tabela `alfabetizacao_brasil.alunos_avaliacoes_validas` no Amazon Athena;
+- validação da nova Gold no Athena com 3.354.661 registros;
 - documentação da integração para início da Fase 3.
 
 As próximas etapas correspondem à construção da base analítica final, análise exploratória e desenvolvimento dos modelos de Machine Learning.
