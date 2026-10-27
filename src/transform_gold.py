@@ -20,13 +20,18 @@ def save_gold_table(df: pd.DataFrame, table_name: str) -> None:
     print(f"Registros gerados: {len(df)}")
 
 
-def build_indicadores_alfabetizacao_uf(df_uf: pd.DataFrame) -> pd.DataFrame:
+def build_indicadores_alfabetizacao_uf(
+    df_uf: pd.DataFrame,
+) -> pd.DataFrame:
     df = df_uf.copy()
 
-    # O ponto de corte de 743 pontos é usado como referência para avaliar a proficiência média.
-    df["distancia_ponto_corte"] = df["media_portugues"] - PONTO_CORTE_ALFABETIZACAO
+    # usando 743 pontos como referência para a proficiência média
+    df["distancia_ponto_corte"] = (
+        df["media_portugues"] - PONTO_CORTE_ALFABETIZACAO
+    )
 
     df["status_ponto_corte"] = "abaixo_do_ponto_corte"
+
     df.loc[
         df["media_portugues"] >= PONTO_CORTE_ALFABETIZACAO,
         "status_ponto_corte",
@@ -46,14 +51,18 @@ def build_indicadores_alfabetizacao_uf(df_uf: pd.DataFrame) -> pd.DataFrame:
     return df[columns]
 
 
-def build_indicadores_alfabetizacao_municipio(df_municipio: pd.DataFrame) -> pd.DataFrame:
+def build_indicadores_alfabetizacao_municipio(
+    df_municipio: pd.DataFrame,
+) -> pd.DataFrame:
     df = df_municipio.copy()
 
-    # A lógica municipal segue a mesma referência usada na tabela de UF,
-    # mas em uma granularidade mais detalhada.
-    df["distancia_ponto_corte"] = df["media_portugues"] - PONTO_CORTE_ALFABETIZACAO
+    # aplicando a mesma referência na tabela municipal
+    df["distancia_ponto_corte"] = (
+        df["media_portugues"] - PONTO_CORTE_ALFABETIZACAO
+    )
 
     df["status_ponto_corte"] = "abaixo_do_ponto_corte"
+
     df.loc[
         df["media_portugues"] >= PONTO_CORTE_ALFABETIZACAO,
         "status_ponto_corte",
@@ -73,27 +82,66 @@ def build_indicadores_alfabetizacao_municipio(df_municipio: pd.DataFrame) -> pd.
     return df[columns]
 
 
-def add_meta_referencia_ano(df: pd.DataFrame) -> pd.DataFrame:
+def build_alunos_avaliacoes_validas(
+    df_alunos: pd.DataFrame,
+) -> pd.DataFrame:
+    df = df_alunos.copy()
+
+    # considerando apenas alunos presentes e com a prova preenchida
+    valid_rows = (
+        (df["presenca_codigo"] == "1")
+        & (df["preenchimento_caderno_codigo"] == "1")
+    )
+
+    df = df.loc[valid_rows].copy()
+
+    columns = [
+        "ano",
+        "id_municipio",
+        "id_escola",
+        "id_aluno",
+        "caderno_codigo",
+        "serie_codigo",
+        "rede_codigo",
+        "alfabetizado",
+        "proficiencia",
+        "peso_aluno",
+    ]
+
+    return df[columns]
+
+
+def add_meta_referencia_ano(
+    df: pd.DataFrame,
+) -> pd.DataFrame:
     df = df.copy()
     df["meta_referencia_ano"] = pd.NA
 
-    # As metas estão em colunas separadas por ano.
-    # Aqui eu trago para uma única coluna a meta correspondente ao ano do registro.
+    # trazendo para uma única coluna a meta correspondente ao ano
     for ano in df["ano"].dropna().unique():
         meta_column = f"meta_alfabetizacao_{int(ano)}"
 
         if meta_column in df.columns:
-            df.loc[df["ano"] == ano, "meta_referencia_ano"] = df.loc[
+            df.loc[
+                df["ano"] == ano,
+                "meta_referencia_ano",
+            ] = df.loc[
                 df["ano"] == ano,
                 meta_column,
             ]
 
-    df["meta_referencia_ano"] = pd.to_numeric(df["meta_referencia_ano"])
+    df["meta_referencia_ano"] = pd.to_numeric(
+        df["meta_referencia_ano"]
+    )
 
     return df
 
 
-def add_status_meta(df: pd.DataFrame, distance_column: str, status_column: str) -> pd.DataFrame:
+def add_status_meta(
+    df: pd.DataFrame,
+    distance_column: str,
+    status_column: str,
+) -> pd.DataFrame:
     df = df.copy()
 
     df[status_column] = "sem_meta_ou_resultado"
@@ -120,7 +168,8 @@ def build_comparativo_metas_uf_brasil(
     meta_brasil = add_meta_referencia_ano(df_meta_brasil)
 
     meta_uf["distancia_para_meta_uf"] = (
-        meta_uf["taxa_alfabetizacao"] - meta_uf["meta_referencia_ano"]
+        meta_uf["taxa_alfabetizacao"]
+        - meta_uf["meta_referencia_ano"]
     )
 
     meta_uf = add_status_meta(
@@ -141,7 +190,9 @@ def build_comparativo_metas_uf_brasil(
         columns={
             "taxa_alfabetizacao": "taxa_alfabetizacao_brasil",
             "meta_referencia_ano": "meta_referencia_brasil",
-            "percentual_participacao": "percentual_participacao_brasil",
+            "percentual_participacao": (
+                "percentual_participacao_brasil"
+            ),
         }
     )
 
@@ -152,7 +203,8 @@ def build_comparativo_metas_uf_brasil(
     )
 
     df["diferenca_taxa_uf_brasil"] = (
-        df["taxa_alfabetizacao"] - df["taxa_alfabetizacao_brasil"]
+        df["taxa_alfabetizacao"]
+        - df["taxa_alfabetizacao_brasil"]
     )
 
     columns = [
@@ -177,13 +229,17 @@ def build_comparativo_metas_municipio_brasil(
     df_meta_municipio: pd.DataFrame,
     df_meta_brasil: pd.DataFrame,
 ) -> pd.DataFrame:
-    meta_municipio = add_meta_referencia_ano(df_meta_municipio)
-    meta_brasil = add_meta_referencia_ano(df_meta_brasil)
+    meta_municipio = add_meta_referencia_ano(
+        df_meta_municipio
+    )
+    meta_brasil = add_meta_referencia_ano(
+        df_meta_brasil
+    )
 
-    # Esta tabela ajuda a analisar municípios em relação às próprias metas
-    # e também em comparação com a referência nacional.
+    # comparando o município com sua meta e com a referência nacional
     meta_municipio["distancia_para_meta_municipio"] = (
-        meta_municipio["taxa_alfabetizacao"] - meta_municipio["meta_referencia_ano"]
+        meta_municipio["taxa_alfabetizacao"]
+        - meta_municipio["meta_referencia_ano"]
     )
 
     meta_municipio = add_status_meta(
@@ -203,7 +259,9 @@ def build_comparativo_metas_municipio_brasil(
         columns={
             "taxa_alfabetizacao": "taxa_alfabetizacao_brasil",
             "meta_referencia_ano": "meta_referencia_brasil",
-            "percentual_participacao": "percentual_participacao_brasil",
+            "percentual_participacao": (
+                "percentual_participacao_brasil"
+            ),
         }
     )
 
@@ -215,7 +273,8 @@ def build_comparativo_metas_municipio_brasil(
     )
 
     df["diferenca_taxa_municipio_brasil"] = (
-        df["taxa_alfabetizacao"] - df["taxa_alfabetizacao_brasil"]
+        df["taxa_alfabetizacao"]
+        - df["taxa_alfabetizacao_brasil"]
     )
 
     columns = [
@@ -240,29 +299,76 @@ def build_comparativo_metas_municipio_brasil(
 def main() -> None:
     GOLD_DIR.mkdir(parents=True, exist_ok=True)
 
+    # carregando as tabelas da Silver
     df_uf = read_silver_table("uf")
     df_municipio = read_silver_table("municipio")
-    df_meta_uf = read_silver_table("meta_alfabetizacao_uf")
-    df_meta_brasil = read_silver_table("meta_alfabetizacao_brasil")
-    df_meta_municipio = read_silver_table("meta_alfabetizacao_municipio")
+    df_meta_uf = read_silver_table(
+        "meta_alfabetizacao_uf"
+    )
+    df_meta_brasil = read_silver_table(
+        "meta_alfabetizacao_brasil"
+    )
+    df_meta_municipio = read_silver_table(
+        "meta_alfabetizacao_municipio"
+    )
+    df_alunos = read_silver_table("alunos")
 
-    indicadores_uf = build_indicadores_alfabetizacao_uf(df_uf)
-    indicadores_municipio = build_indicadores_alfabetizacao_municipio(df_municipio)
-
-    comparativo_metas_uf = build_comparativo_metas_uf_brasil(
-        df_meta_uf,
-        df_meta_brasil,
+    # criando as tabelas analíticas da Gold
+    indicadores_uf = build_indicadores_alfabetizacao_uf(
+        df_uf
     )
 
-    comparativo_metas_municipio = build_comparativo_metas_municipio_brasil(
-        df_meta_municipio,
-        df_meta_brasil,
+    indicadores_municipio = (
+        build_indicadores_alfabetizacao_municipio(
+            df_municipio
+        )
     )
 
-    save_gold_table(indicadores_uf, "indicadores_alfabetizacao_uf")
-    save_gold_table(indicadores_municipio, "indicadores_alfabetizacao_municipio")
-    save_gold_table(comparativo_metas_uf, "comparativo_metas_uf_brasil")
-    save_gold_table(comparativo_metas_municipio, "comparativo_metas_municipio_brasil")
+    alunos_avaliacoes_validas = (
+        build_alunos_avaliacoes_validas(
+            df_alunos
+        )
+    )
+
+    comparativo_metas_uf = (
+        build_comparativo_metas_uf_brasil(
+            df_meta_uf,
+            df_meta_brasil,
+        )
+    )
+
+    comparativo_metas_municipio = (
+        build_comparativo_metas_municipio_brasil(
+            df_meta_municipio,
+            df_meta_brasil,
+        )
+    )
+
+    # salvando as tabelas na Gold
+    save_gold_table(
+        indicadores_uf,
+        "indicadores_alfabetizacao_uf",
+    )
+
+    save_gold_table(
+        indicadores_municipio,
+        "indicadores_alfabetizacao_municipio",
+    )
+
+    save_gold_table(
+        alunos_avaliacoes_validas,
+        "alunos_avaliacoes_validas",
+    )
+
+    save_gold_table(
+        comparativo_metas_uf,
+        "comparativo_metas_uf_brasil",
+    )
+
+    save_gold_table(
+        comparativo_metas_municipio,
+        "comparativo_metas_municipio_brasil",
+    )
 
 
 if __name__ == "__main__":
